@@ -22,10 +22,10 @@ import (
 	"github.com/tendermint/go-rpc/client"
 	"github.com/tendermint/go-wire"
 
-	"github.com/monax/burrow/logging"
-	"github.com/monax/burrow/logging/loggers"
-	ctypes "github.com/monax/burrow/rpc/tendermint/core/types"
-	"github.com/monax/burrow/txs"
+	"github.com/monax/eris-db/logging"
+	"github.com/monax/eris-db/logging/loggers"
+	ctypes "github.com/monax/eris-db/rpc/tendermint/core/types"
+	"github.com/monax/eris-db/txs"
 )
 
 const (
@@ -39,32 +39,32 @@ type Confirmation struct {
 	Error     error
 }
 
-// NOTE [ben] Compiler check to ensure burrowNodeClient successfully implements
-// burrow/client.NodeClient
-var _ NodeWebsocketClient = (*burrowNodeWebsocketClient)(nil)
+// NOTE [ben] Compiler check to ensure erisNodeClient successfully implements
+// eris-db/client.NodeClient
+var _ NodeWebsocketClient = (*erisNodeWebsocketClient)(nil)
 
-type burrowNodeWebsocketClient struct {
+type erisNodeWebsocketClient struct {
 	// TODO: assert no memory leak on closing with open websocket
 	tendermintWebsocket *rpcclient.WSClient
 	logger              loggers.InfoTraceLogger
 }
 
 // Subscribe to an eventid
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Subscribe(eventid string) error {
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) Subscribe(eventid string) error {
 	// TODO we can in the background listen to the subscription id and remember it to ease unsubscribing later.
-	return burrowNodeWebsocketClient.tendermintWebsocket.Subscribe(eventid)
+	return erisNodeWebsocketClient.tendermintWebsocket.Subscribe(eventid)
 }
 
 // Unsubscribe from an eventid
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Unsubscribe(subscriptionId string) error {
-	return burrowNodeWebsocketClient.tendermintWebsocket.Unsubscribe(subscriptionId)
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) Unsubscribe(subscriptionId string) error {
+	return erisNodeWebsocketClient.tendermintWebsocket.Unsubscribe(subscriptionId)
 }
 
 // Returns a channel that will receive a confirmation with a result or the exception that
 // has been confirmed; or an error is returned and the confirmation channel is nil.
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error) {
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) WaitForConfirmation(tx txs.Tx, chainId string, inputAddr []byte) (chan Confirmation, error) {
 	// check no errors are reported on the websocket
-	if err := burrowNodeWebsocketClient.assertNoErrors(); err != nil {
+	if err := erisNodeWebsocketClient.assertNoErrors(); err != nil {
 		return nil, err
 	}
 
@@ -73,21 +73,21 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 	var latestBlockHash []byte
 
 	eid := txs.EventStringAccInput(inputAddr)
-	if err := burrowNodeWebsocketClient.tendermintWebsocket.Subscribe(eid); err != nil {
+	if err := erisNodeWebsocketClient.tendermintWebsocket.Subscribe(eid); err != nil {
 		return nil, fmt.Errorf("Error subscribing to AccInput event (%s): %v", eid, err)
 	}
-	if err := burrowNodeWebsocketClient.tendermintWebsocket.Subscribe(txs.EventStringNewBlock()); err != nil {
+	if err := erisNodeWebsocketClient.tendermintWebsocket.Subscribe(txs.EventStringNewBlock()); err != nil {
 		return nil, fmt.Errorf("Error subscribing to NewBlock event: %v", err)
 	}
 	// Read the incoming events
 	go func() {
 		var err error
 		for {
-			resultBytes := <-burrowNodeWebsocketClient.tendermintWebsocket.ResultsCh
-			result := new(ctypes.BurrowResult)
+			resultBytes := <-erisNodeWebsocketClient.tendermintWebsocket.ResultsCh
+			result := new(ctypes.ErisDBResult)
 			if wire.ReadJSONPtr(result, resultBytes, &err); err != nil {
 				// keep calm and carry on
-				logging.InfoMsg(burrowNodeWebsocketClient.logger, "Failed to unmarshal json bytes for websocket event",
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "Failed to unmarshal json bytes for websocket event",
 					"error", err)
 				continue
 			}
@@ -97,7 +97,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 				// Received confirmation of subscription to event streams
 				// TODO: collect subscription IDs, push into channel and on completion
 				// unsubscribe
-				logging.InfoMsg(burrowNodeWebsocketClient.logger, "Received confirmation for event",
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "Received confirmation for event",
 					"event", subscription.Event,
 					"subscription_id", subscription.SubscriptionId)
 				continue
@@ -106,7 +106,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 			event, ok := (*result).(*ctypes.ResultEvent)
 			if !ok {
 				// keep calm and carry on
-				logging.InfoMsg(burrowNodeWebsocketClient.logger, "Failed to cast to ResultEvent for websocket event",
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "Failed to cast to ResultEvent for websocket event",
 					"event", event.Event)
 				continue
 			}
@@ -114,7 +114,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 			blockData, ok := event.Data.(txs.EventDataNewBlock)
 			if ok {
 				latestBlockHash = blockData.Block.Hash()
-				logging.TraceMsg(burrowNodeWebsocketClient.logger, "Registered new block",
+				logging.TraceMsg(erisNodeWebsocketClient.logger, "Registered new block",
 					"block", blockData.Block,
 					"latest_block_hash", latestBlockHash,
 				)
@@ -128,13 +128,13 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 
 			// we don't accept events unless they came after a new block (ie. in)
 			// if latestBlockHash == nil {
-			// 	logging.InfoMsg(burrowNodeWebsocketClient.logger, "First block has not been registered so ignoring event",
+			// 	logging.InfoMsg(erisNodeWebsocketClient.logger, "First block has not been registered so ignoring event",
 			// 		"event", event.Event)
 			// 	continue
 			// }
 
 			if event.Event != eid {
-				logging.InfoMsg(burrowNodeWebsocketClient.logger, "Received unsolicited event",
+				logging.InfoMsg(erisNodeWebsocketClient.logger, "Received unsolicited event",
 					"event_received", event.Event,
 					"event_expected", eid)
 				continue
@@ -153,7 +153,7 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 			}
 
 			if !bytes.Equal(txs.TxHash(chainId, data.Tx), txs.TxHash(chainId, tx)) {
-				logging.TraceMsg(burrowNodeWebsocketClient.logger, "Received different event",
+				logging.TraceMsg(erisNodeWebsocketClient.logger, "Received different event",
 					// TODO: consider re-implementing TxID again, or other more clear debug
 					"received transaction event", txs.TxHash(chainId, data.Tx))
 				continue
@@ -197,21 +197,21 @@ func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) WaitForConfirmation(
 	return confirmationChannel, nil
 }
 
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) Close() {
-	if burrowNodeWebsocketClient.tendermintWebsocket != nil {
-		burrowNodeWebsocketClient.tendermintWebsocket.Stop()
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) Close() {
+	if erisNodeWebsocketClient.tendermintWebsocket != nil {
+		erisNodeWebsocketClient.tendermintWebsocket.Stop()
 	}
 }
 
-func (burrowNodeWebsocketClient *burrowNodeWebsocketClient) assertNoErrors() error {
-	if burrowNodeWebsocketClient.tendermintWebsocket != nil {
+func (erisNodeWebsocketClient *erisNodeWebsocketClient) assertNoErrors() error {
+	if erisNodeWebsocketClient.tendermintWebsocket != nil {
 		select {
-		case err := <-burrowNodeWebsocketClient.tendermintWebsocket.ErrorsCh:
+		case err := <-erisNodeWebsocketClient.tendermintWebsocket.ErrorsCh:
 			return err
 		default:
 			return nil
 		}
 	} else {
-		return fmt.Errorf("burrow-client has no websocket initialised.")
+		return fmt.Errorf("Eris-client has no websocket initialised.")
 	}
 }

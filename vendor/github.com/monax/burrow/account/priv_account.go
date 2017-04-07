@@ -16,12 +16,12 @@ package account
 
 // TODO: [ben] Account and PrivateAccount need to become a pure interface
 // and then move the implementation to the manager types.
-// Eg, Geth has its accounts, different from BurrowMint
+// Eg, Geth has its accounts, different from ErisMint
 
 import (
 	"fmt"
 
-	"github.com/monax/burrow/common/sanity"
+	"github.com/monax/eris-db/common/sanity"
 
 	"github.com/tendermint/ed25519"
 	"github.com/tendermint/go-crypto"

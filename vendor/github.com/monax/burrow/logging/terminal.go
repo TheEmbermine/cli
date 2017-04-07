@@ -16,7 +16,7 @@ package logging
 
 import (
 	"github.com/go-kit/kit/log/term"
-	"github.com/monax/burrow/logging/structure"
+	"github.com/monax/eris-db/logging/structure"
 )
 
 func Colors(keyvals ...interface{}) term.FgBgColor {

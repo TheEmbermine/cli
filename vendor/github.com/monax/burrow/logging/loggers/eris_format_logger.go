@@ -17,27 +17,27 @@ package loggers
 import (
 	"fmt"
 
-	"github.com/monax/burrow/logging/structure"
+	"github.com/monax/eris-db/logging/structure"
 
 	kitlog "github.com/go-kit/kit/log"
 )
 
-// Logger that implements some formatting conventions for burrow and burrow-client
+// Logger that implements some formatting conventions for eris-db and eris-client
 // This is intended for applying consistent value formatting before the final 'output' logger;
 // we should avoid prematurely formatting values here if it is useful to let the output logger
 // decide how it wants to display values. Ideal candidates for 'early' formatting here are types that
 // we control and generic output loggers are unlikely to know about.
-type burrowFormatLogger struct {
+type erisFormatLogger struct {
 	logger kitlog.Logger
 }
 
-var _ kitlog.Logger = &burrowFormatLogger{}
+var _ kitlog.Logger = &erisFormatLogger{}
 
-func (efl *burrowFormatLogger) Log(keyvals ...interface{}) error {
-	return efl.logger.Log(structure.MapKeyValues(keyvals, burrowFormatKeyValueMapper)...)
+func (efl *erisFormatLogger) Log(keyvals ...interface{}) error {
+	return efl.logger.Log(structure.MapKeyValues(keyvals, erisFormatKeyValueMapper)...)
 }
 
-func burrowFormatKeyValueMapper(key, value interface{}) (interface{}, interface{}) {
+func erisFormatKeyValueMapper(key, value interface{}) (interface{}, interface{}) {
 	switch key {
 	default:
 		switch v := value.(type) {
@@ -48,6 +48,6 @@ func burrowFormatKeyValueMapper(key, value interface{}) (interface{}, interface{
 	return key, value
 }
 
-func MonaxFormatLogger(logger kitlog.Logger) *burrowFormatLogger {
-	return &burrowFormatLogger{logger: logger}
+func ErisFormatLogger(logger kitlog.Logger) *erisFormatLogger {
+	return &erisFormatLogger{logger: logger}
 }

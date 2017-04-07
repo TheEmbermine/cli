@@ -1,7 +1,8 @@
-FROM quay.io/monax/build
+FROM quay.io/eris/build
 MAINTAINER Monax <support@monax.io>
 
-ENV TARGET burrow
+# Install eris-db, a go app that manages relationships
+ENV TARGET eris-db
 ENV REPO $GOPATH/src/github.com/monax/$TARGET
 
 ADD ./glide.yaml $REPO/
@@ -14,5 +15,5 @@ RUN cd $REPO/cmd/$TARGET && \
   go build --ldflags '-extldflags "-static"' -o $INSTALL_BASE/$TARGET
 
 # build customizations start here
-RUN cd $REPO/client/cmd/burrow-client && \
-  go build --ldflags '-extldflags "-static"' -o $INSTALL_BASE/burrow-client
+RUN cd $REPO/client/cmd/eris-client && \
+  go build --ldflags '-extldflags "-static"' -o $INSTALL_BASE/eris-client
