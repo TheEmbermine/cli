@@ -45,7 +45,7 @@ Complete documentation is available at https://monax.io/docs
 			return
 		}
 
-		util.DockerConnect(do.Verbose, do.MachineName)
+		util.DockerConnect(do.Verbose, "default") // see note at the function
 
 		if os.Getenv("TEST_ON_WINDOWS") == "true" || os.Getenv("TEST_ON_MACOSX") == "true" {
 			return
@@ -77,9 +77,7 @@ Complete documentation is available at https://monax.io/docs
 
 		// Compare `docker-machine` versions but don't fail if not installed.
 		dmVersion, err := util.DockerMachineVersion()
-		if err != nil {
-			log.Info("The marmots could not find [docker-machine] installed. While it is not required to be used with Monax, we strongly recommend it be installed for maximum blockchain awesomeness")
-		} else if !util.CompareVersions(dmVersion, dmVerMin) {
+		if !util.CompareVersions(dmVersion, dmVerMin) {
 			util.IfExit(fmt.Errorf("Monax requires [docker-machine] version >= %v\nThe marmots have detected version: %v\n%s", dmVerMin, dmVersion, marmot))
 		}
 	},
@@ -137,7 +135,6 @@ var do *definitions.Do
 func AddGlobalFlags() {
 	MonaxCmd.PersistentFlags().BoolVarP(&do.Verbose, "verbose", "v", false, "verbose output")
 	MonaxCmd.PersistentFlags().BoolVarP(&do.Debug, "debug", "d", false, "debug level output")
-	MonaxCmd.PersistentFlags().StringVarP(&do.MachineName, "machine", "m", "monax", "machine name for docker-machine that is running VM")
 }
 
 func InitializeConfig() {

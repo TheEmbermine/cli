@@ -121,7 +121,6 @@ func ChainsAsAService(chainName string) (*definitions.ServiceDefinition, error) 
 		Operations:   chain.Operations,
 		Maintainer:   chain.Maintainer,
 		Location:     chain.Location,
-		Machine:      chain.Machine,
 	}
 
 	// These are mostly operational considerations that we want to ensure are met.
